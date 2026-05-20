@@ -39,12 +39,13 @@ export class QuickCheckInModal extends Modal {
 		contentEl.createEl("h2", { text: "Quick check-in" });
 
 		this.contentTextarea = contentEl.createEl("textarea", {
-			cls: "pt-checkin-modal-content",
-			attr: { placeholder: "Write your note or type # to add tags..." },
+			cls: "pt-checkin-modal-content timeline-composer-content-input",
 		});
 		this.contentTextarea.value = this.content;
+		this.syncContentTextareaHeight();
 		this.contentTextarea.addEventListener("input", () => {
 			this.content = this.contentTextarea.value;
+			this.syncContentTextareaHeight();
 		});
 		this.contentTextarea.addEventListener("keydown", (event) => {
 			if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
@@ -55,8 +56,11 @@ export class QuickCheckInModal extends Modal {
 
 		this.renderAttachments(contentEl);
 		this.renderTags(contentEl);
-		this.renderAttachmentActions(contentEl);
-		this.renderFooter(contentEl);
+		const actionsRow = contentEl.createDiv({
+			cls: "pt-checkin-modal-footer timeline-composer-footer",
+		});
+		this.renderAttachmentActions(actionsRow);
+		this.renderFooter(actionsRow);
 
 		window.setTimeout(() => {
 			this.contentTextarea.focus();
@@ -74,7 +78,9 @@ export class QuickCheckInModal extends Modal {
 	}
 
 	private renderAttachmentActions(container: HTMLElement): void {
-		const row = container.createDiv({ cls: "pt-checkin-modal-actions" });
+		const row = container.createDiv({
+			cls: "pt-checkin-modal-actions timeline-composer-tools",
+		});
 		const imageButton = row.createEl("button", {
 			cls: "timeline-icon-button",
 			attr: { "aria-label": "Add image", type: "button" },
@@ -260,12 +266,12 @@ export class QuickCheckInModal extends Modal {
 	}
 
 	private renderFooter(container: HTMLElement): void {
-		const footer = container.createDiv({ cls: "pt-checkin-modal-footer" });
-		const cancelButton = footer.createEl("button", {
+		const actions = container.createDiv({ cls: "timeline-composer-actions" });
+		const cancelButton = actions.createEl("button", {
 			text: "Cancel",
 			cls: "timeline-composer-secondary-button",
 		});
-		const createButton = footer.createEl("button", {
+		const createButton = actions.createEl("button", {
 			cls: "mod-cta timeline-composer-submit",
 			text: "Create",
 		});
@@ -398,6 +404,11 @@ export class QuickCheckInModal extends Modal {
 		this.tagsInput = this.getTags()
 			.filter((tag) => tag !== tagToRemove)
 			.join(", ");
+	}
+
+	private syncContentTextareaHeight(): void {
+		this.contentTextarea.style.height = "0px";
+		this.contentTextarea.style.height = `${this.contentTextarea.scrollHeight}px`;
 	}
 
 	private redraw(): void {

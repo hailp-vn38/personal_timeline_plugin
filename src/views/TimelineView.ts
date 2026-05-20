@@ -301,13 +301,22 @@ export class TimelineView extends ItemView {
 		}
 
 		const composer = container.createDiv({ cls: "timeline-composer" });
+		const normalizedComposerContent =
+			this.composerContent.trim().length === 0
+				? ""
+				: this.composerContent;
+		if (!normalizedComposerContent && this.composerContent) {
+			this.composerContent = "";
+		}
 		const contentInput = composer.createEl("textarea", {
-			placeholder: "Write your note or type # to add tags...",
+			placeholder: "Hãy nhập",
 		});
-		contentInput.addClass("timeline-textarea");
-		contentInput.value = this.composerContent;
+		contentInput.addClass("timeline-composer-content-input");
+		contentInput.value = normalizedComposerContent;
+		this.syncComposerContentInputHeight(contentInput);
 		contentInput.addEventListener("input", () => {
 			this.composerContent = contentInput.value;
+			this.syncComposerContentInputHeight(contentInput);
 		});
 		contentInput.addEventListener("paste", (event) => {
 			void this.handlePaste(event);
@@ -341,7 +350,7 @@ export class TimelineView extends ItemView {
 
 		const tagsInput = tagsRow.createEl("input", {
 			type: "text",
-			placeholder: tags.length > 0 ? "# Thêm nhân." : "# Add tags",
+			placeholder: tags.length > 0 ? "# Add tags" : "# Add tags",
 		});
 		tagsInput.addClass("timeline-composer-tag-input");
 		tagsInput.value = this.composerTagDraft;
@@ -467,9 +476,15 @@ export class TimelineView extends ItemView {
 		const section = container.createDiv({
 			cls: "timeline-pending-section",
 		});
-		const imageRow = section.createDiv({ cls: "timeline-pending-list timeline-pending-images" });
-		const fileRow = section.createDiv({ cls: "timeline-pending-list timeline-pending-files" });
-		const audioRow = section.createDiv({ cls: "timeline-pending-list timeline-pending-audios" });
+		const imageRow = section.createDiv({
+			cls: "timeline-pending-list timeline-pending-images",
+		});
+		const fileRow = section.createDiv({
+			cls: "timeline-pending-list timeline-pending-files",
+		});
+		const audioRow = section.createDiv({
+			cls: "timeline-pending-list timeline-pending-audios",
+		});
 
 		this.pendingAttachments.forEach((attachment, index) => {
 			const parent =
@@ -501,10 +516,16 @@ export class TimelineView extends ItemView {
 					text: formatAttachmentSize(attachment.data.byteLength),
 				});
 			} else if (attachment.type === "file") {
-				const fileSummary = card.createDiv({ cls: "timeline-pending-file-row" });
-				const fileIcon = fileSummary.createDiv({ cls: "timeline-pending-file-icon" });
+				const fileSummary = card.createDiv({
+					cls: "timeline-pending-file-row",
+				});
+				const fileIcon = fileSummary.createDiv({
+					cls: "timeline-pending-file-icon",
+				});
 				setIcon(fileIcon, "file-down");
-				const fileBody = fileSummary.createDiv({ cls: "timeline-pending-file-body" });
+				const fileBody = fileSummary.createDiv({
+					cls: "timeline-pending-file-body",
+				});
 				fileBody.createEl("strong", {
 					cls: "timeline-pending-file-name",
 					text: attachment.name,
@@ -599,7 +620,10 @@ export class TimelineView extends ItemView {
 					text: `#${normalizedTag}`,
 					attr: {
 						type: "button",
-						"aria-pressed": this.filters.selectedTag === normalizedTag ? "true" : "false",
+						"aria-pressed":
+							this.filters.selectedTag === normalizedTag
+								? "true"
+								: "false",
 						"aria-label": `Filter by #${normalizedTag}`,
 					},
 				});
@@ -619,87 +643,63 @@ export class TimelineView extends ItemView {
 		attachments: TimelineAttachment[],
 	): void {
 		const imageAttachments = attachments.filter(
-			(attachment) => attachment.type === "image",
+			(attachment) =>
+				attachment.type === "image" &&
+				this.plugin.app.vault.getAbstractFileByPath(
+					attachment.path,
+				) instanceof TFile,
 		);
 		const audioAttachments = attachments.filter(
-			(attachment) => attachment.type === "audio",
+			(attachment) =>
+				attachment.type === "audio" &&
+				this.plugin.app.vault.getAbstractFileByPath(
+					attachment.path,
+				) instanceof TFile,
 		);
-		const fileAttachments = attachments.filter(
-			(attachment) => attachment.type === "file",
-		);
-		const summaryParts: string[] = [];
 
-		if (imageAttachments.length > 0) {
-			summaryParts.push(`🖼 ${imageAttachments.length}`);
-		}
-
-		if (audioAttachments.length > 0) {
-			summaryParts.push(`🎙 ${audioAttachments.length}`);
-		}
-
-		if (fileAttachments.length > 0) {
-			summaryParts.push(`📄 ${fileAttachments.length}`);
-		}
-
-		if (summaryParts.length === 0) {
+		if (imageAttachments.length === 0 && audioAttachments.length === 0) {
 			return;
 		}
 
-		const summary = container.createDiv({ cls: "pt-entry-attachments" });
-		summary.setText(
-			`📎 ${attachments.length} attachments · ${summaryParts.join(" · ")}`,
-		);
-
-		const detailList = container.createDiv({
-			cls: "pt-expanded-attachments",
-		});
+		const detailList = container.createDiv({ cls: "pt-entry-attachments" });
 		if (imageAttachments.length > 0) {
-			const imageGrid = detailList.createDiv({
-				cls: "timeline-attachment-image-grid",
+			const imageRow = detailList.createDiv({
+				cls: "pt-entry-attachment-row pt-entry-image-row",
 			});
-			for (const attachment of imageAttachments) {
+			imageAttachments.forEach((attachment) => {
 				const abstractFile =
 					this.plugin.app.vault.getAbstractFileByPath(
 						attachment.path,
-					);
-				if (!(abstractFile instanceof TFile)) {
-					continue;
-				}
-
+					) as TFile;
 				const resourcePath =
 					this.plugin.app.vault.getResourcePath(abstractFile);
-				const displayName = attachment.name ?? abstractFile.name;
-				imageGrid.createEl("img", {
-					cls: "timeline-attachment-image",
-					attr: { src: resourcePath, alt: displayName },
+				imageRow.createEl("img", {
+					cls: "timeline-attachment-image pt-entry-image-thumb",
+					attr: {
+						src: resourcePath,
+						alt: attachment.name ?? abstractFile.name,
+					},
 				});
-			}
+			});
 		}
 
-		for (const attachment of audioAttachments) {
-			const abstractFile = this.plugin.app.vault.getAbstractFileByPath(
-				attachment.path,
-			);
-			if (!(abstractFile instanceof TFile)) {
-				detailList.createEl("div", {
-					cls: "timeline-attachment-missing",
-					text: `Missing attachment: ${attachment.name ?? "Unknown file"}`,
+		if (audioAttachments.length > 0) {
+			const audioRow = detailList.createDiv({
+				cls: "pt-entry-attachment-row pt-entry-audio-row",
+			});
+			audioAttachments.forEach((attachment) => {
+				const abstractFile =
+					this.plugin.app.vault.getAbstractFileByPath(
+						attachment.path,
+					) as TFile;
+				const resourcePath =
+					this.plugin.app.vault.getResourcePath(abstractFile);
+				const audio = audioRow.createEl("audio", {
+					cls: "timeline-attachment-audio pt-audio-player",
 				});
-				continue;
-			}
-
-			const resourcePath =
-				this.plugin.app.vault.getResourcePath(abstractFile);
-			const displayName = attachment.name ?? abstractFile.name;
-			detailList.createEl("div", {
-				cls: "pt-expanded-attachment",
-				text: `🎙 ${displayName}`,
+				audio.controls = true;
+				audio.src = resourcePath;
 			});
-			const audio = detailList.createEl("audio", {
-				cls: "timeline-attachment-audio pt-audio-player",
-			});
-			audio.controls = true;
-			audio.src = resourcePath;
 		}
 	}
 
@@ -1001,6 +1001,11 @@ export class TimelineView extends ItemView {
 		);
 	}
 
+	private syncComposerContentInputHeight(input: HTMLTextAreaElement): void {
+		input.style.height = "0px";
+		input.style.height = `${input.scrollHeight}px`;
+	}
+
 	private commitComposerTagDraft(): boolean {
 		const parsedDraft = parseTags(this.composerTagDraft);
 		if (parsedDraft.length === 0) {
@@ -1273,7 +1278,9 @@ class EditEntryModal extends Modal {
 	}
 }
 
-function getPendingAttachmentCardClass(attachment: PendingQuickAttachment): string {
+function getPendingAttachmentCardClass(
+	attachment: PendingQuickAttachment,
+): string {
 	switch (attachment.type) {
 		case "image":
 			return "is-image";

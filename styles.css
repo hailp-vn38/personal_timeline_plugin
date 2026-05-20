@@ -147,7 +147,7 @@
 }
 
 .timeline-input,
-.timeline-textarea,
+.timeline-composer-content-input,
 .timeline-select {
 	width: 100%;
 	border: 1px solid var(--background-modifier-border);
@@ -208,27 +208,38 @@
 	gap: 8px;
 }
 
-.timeline-textarea {
-	min-height: 84px;
-	resize: vertical;
+.timeline-composer-content-input {
+	min-height: calc(1.4em * 2 + 6px);
+	height: auto;
 	padding: 0 2px 6px;
 	border: 0;
 	border-radius: 0;
 	background: transparent;
 	box-shadow: none;
 	font-size: 1.15em;
-	line-height: 1.55;
+	line-height: 1.4;
+	resize: none;
+	overflow: hidden;
 }
 
-.timeline-textarea:focus,
+.timeline-composer-content-input:hover,
+.timeline-composer-content-input:focus {
+	background: transparent;
+	color: var(--text-normal);
+	border-color: transparent;
+	box-shadow: none;
+}
+
+.timeline-composer-content-input:focus,
 .timeline-composer-tag-input:focus {
 	outline: none;
 	box-shadow: none;
 }
 
-.timeline-textarea::placeholder,
+.timeline-composer-content-input::placeholder,
 .timeline-composer-tag-input::placeholder {
-	color: color-mix(in srgb, var(--text-muted) 88%, transparent 12%);
+	color: var(--text-muted);
+	opacity: 1;
 }
 
 .timeline-toolbar-summary {
@@ -326,8 +337,8 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 8px;
-	padding: 2px 0 0 0;
+	gap: 6px;
+	padding: 0;
 	border-bottom: none;
 }
 
@@ -384,37 +395,55 @@
 	color: var(--text-normal);
 }
 
-.timeline-composer-tag-input {
+input.timeline-composer-tag-input {
 	flex: 1 0 140px;
 	min-width: 100px;
 	max-width: 100%;
 	padding: 0;
-	border: 0;
-	border-radius: 0;
-	background: transparent;
+	min-height: 28px;
+	border: 0 !important;
+	border-radius: 0 !important;
+	background: transparent !important;
 	color: var(--text-normal);
 	font: inherit;
-	box-shadow: none;
+	box-shadow: none !important;
+	outline: none !important;
+	appearance: none !important;
+	-webkit-appearance: none !important;
+}
+
+input.timeline-composer-tag-input:hover,
+input.timeline-composer-tag-input:focus,
+input.timeline-composer-tag-input:active,
+input.timeline-composer-tag-input:focus-visible {
+	border: 0 !important;
+	outline: none !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	border-color: transparent !important;
 }
 
 .timeline-composer-footer {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 10px;
+	gap: 6px;
 	flex-wrap: wrap;
 }
 
 .timeline-composer-tools {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 6px;
 	flex-wrap: wrap;
 }
 
 .timeline-composer button.timeline-icon-button,
 .timeline-composer button.timeline-composer-secondary-button,
-.timeline-composer button.timeline-composer-submit {
+.timeline-composer button.timeline-composer-submit,
+.pt-checkin-modal button.timeline-icon-button,
+.pt-checkin-modal button.timeline-composer-secondary-button,
+.pt-checkin-modal button.timeline-composer-submit {
 	appearance: none;
 	-webkit-appearance: none;
 	cursor: pointer;
@@ -424,47 +453,54 @@
 	background-image: none !important;
 }
 
-.timeline-composer button.timeline-icon-button {
+.timeline-composer button.timeline-icon-button,
+.pt-checkin-modal button.timeline-icon-button {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 40px;
-	height: 40px;
+	width: 34px;
+	height: 34px;
 	padding: 0;
-	border-radius: 12px;
+	border-radius: 10px;
 	color: var(--text-muted);
 }
 
-.timeline-composer button.timeline-icon-button:hover {
+.timeline-composer button.timeline-icon-button:hover,
+.pt-checkin-modal button.timeline-icon-button:hover {
 	color: var(--text-normal);
 }
 
-.timeline-composer button.timeline-icon-button.is-recording {
+.timeline-composer button.timeline-icon-button.is-recording,
+.pt-checkin-modal button.timeline-icon-button.is-recording {
 	color: var(--color-red);
 }
 
-.timeline-composer button.timeline-composer-secondary-button {
-	min-height: 40px;
-	padding: 0 16px;
-	border-radius: 12px;
+.timeline-composer button.timeline-composer-secondary-button,
+.pt-checkin-modal button.timeline-composer-secondary-button {
+	min-height: 34px;
+	padding: 0 12px;
+	border-radius: 10px;
 	color: var(--text-muted);
 }
 
-.timeline-composer button.timeline-composer-secondary-button:hover {
+.timeline-composer button.timeline-composer-secondary-button:hover,
+.pt-checkin-modal button.timeline-composer-secondary-button:hover {
 	color: var(--text-normal);
 }
 
-.timeline-composer button.timeline-composer-submit {
+.timeline-composer button.timeline-composer-submit,
+.pt-checkin-modal button.timeline-composer-submit {
 	display: inline-flex;
 	align-items: center;
-	gap: 8px;
-	min-height: 40px;
-	padding-inline: 18px;
+	gap: 6px;
+	min-height: 34px;
+	padding-inline: 14px;
 	border-radius: 999px;
 	color: var(--text-normal);
 }
 
-.timeline-composer button.timeline-composer-submit:hover {
+.timeline-composer button.timeline-composer-submit:hover,
+.pt-checkin-modal button.timeline-composer-submit:hover {
 	color: var(--text-normal);
 }
 
@@ -733,17 +769,7 @@
 }
 
 .pt-checkin-modal-content {
-	width: 100%;
-	min-height: 96px;
 	max-height: 280px;
-	resize: vertical;
-	border: 0;
-	border-radius: 0;
-	background: transparent;
-	color: var(--text-normal);
-	padding: 0 2px 6px;
-	font: inherit;
-	box-shadow: none;
 	font-size: 1.05em;
 	line-height: 1.5;
 }
@@ -754,16 +780,10 @@
 }
 
 .pt-checkin-modal-actions {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	flex-wrap: wrap;
+	margin-top: -2px;
 }
 
 .pt-checkin-modal-footer {
-	display: flex;
-	justify-content: flex-end;
-	gap: 8px;
 	margin-top: 2px;
 }
 
@@ -847,7 +867,7 @@
 
 .pt-entry-main {
 	min-width: 0;
-	padding: 0 4px 20px 0;
+	padding: 0 4px 32px 0;
 	border-radius: 8px;
 }
 
@@ -928,21 +948,37 @@
 }
 
 .pt-entry-attachments {
-	margin-top: 6px;
-	color: var(--text-muted);
-	font-size: 0.85em;
-}
-
-.pt-expanded-attachments {
 	margin-top: 8px;
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: 6px;
+	color: var(--text-muted);
+	font-size: 0.85em;
 }
 
-.pt-expanded-attachment {
-	font-size: 0.85em;
-	color: var(--text-muted);
+.pt-entry-attachment-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+}
+
+.pt-entry-image-row {
+	flex-wrap: wrap;
+	align-items: flex-start;
+}
+
+.pt-entry-image-thumb {
+	width: 56px;
+	height: 56px;
+	object-fit: cover;
+	border-radius: 8px;
+}
+
+.pt-entry-audio-row {
+	width: 100%;
+	flex-wrap: wrap;
+	align-items: center;
 }
 
 .pt-audio-player {
