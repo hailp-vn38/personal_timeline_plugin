@@ -110,9 +110,13 @@ export class TimelineView extends ItemView {
 			text: describeDatePreset(this.filters, activeDate),
 		});
 		const createButton = header.createEl("button", {
-			text: "Create",
 			cls: "timeline-header-button",
+			attr: {
+				type: "button",
+				"aria-label": "Create check-in",
+			},
 		});
+		setIcon(createButton, "plus");
 		createButton.addEventListener("click", () => {
 			this.isComposerExpanded = true;
 			void this.refresh();
@@ -197,6 +201,13 @@ export class TimelineView extends ItemView {
 			cls: "timeline-filter-toggle",
 		});
 		filtersToggleButton.addEventListener("click", () => {
+			if (this.isFilterExpanded) {
+				this.filters.datePreset = "today";
+				this.filters.customDate = today;
+				this.filters.selectedTag = "";
+				this.filters.startTime = "";
+				this.filters.endTime = "";
+			}
 			this.isFilterExpanded = !this.isFilterExpanded;
 			void this.refresh();
 		});
@@ -285,31 +296,11 @@ export class TimelineView extends ItemView {
 	}
 
 	private renderComposer(container: HTMLElement, today: string): void {
-		const composer = container.createDiv({ cls: "timeline-composer" });
 		if (!this.isComposerExpanded) {
-			const collapsedButton = composer.createEl("button", {
-				cls: "timeline-composer-collapsed",
-			});
-			const collapsedLabel = collapsedButton.createDiv({
-				cls: "timeline-composer-collapsed-copy",
-			});
-			collapsedLabel.createSpan({
-				cls: "timeline-composer-collapsed-subtitle",
-				text: this.composerContent.trim()
-					? this.composerContent.trim()
-					: "Capture a note, tags, or attachments.",
-			});
-			const collapsedIcon = collapsedButton.createSpan({
-				cls: "timeline-composer-plus",
-			});
-			setIcon(collapsedIcon, "plus");
-			collapsedButton.addEventListener("click", () => {
-				this.isComposerExpanded = true;
-				void this.refresh();
-			});
 			return;
 		}
 
+		const composer = container.createDiv({ cls: "timeline-composer" });
 		const contentInput = composer.createEl("textarea", {
 			placeholder: "Write your note or type # to add tags...",
 		});
@@ -602,9 +593,18 @@ export class TimelineView extends ItemView {
 		if (item.tags.length > 0) {
 			const tagsEl = mainEl.createDiv({ cls: "pt-entry-tags" });
 			for (const tag of item.tags) {
-				tagsEl.createSpan({
-					cls: "pt-tag",
-					text: tag.startsWith("#") ? tag : `#${tag}`,
+				const normalizedTag = tag.replace(/^#/, "");
+				const tagButton = tagsEl.createEl("button", {
+					cls: `pt-tag${this.filters.selectedTag === normalizedTag ? " is-active" : ""}`,
+					text: `#${normalizedTag}`,
+					attr: {
+						type: "button",
+						"aria-pressed": this.filters.selectedTag === normalizedTag ? "true" : "false",
+						"aria-label": `Filter by #${normalizedTag}`,
+					},
+				});
+				tagButton.addEventListener("click", () => {
+					this.handleTagFilterToggle(normalizedTag);
 				});
 			}
 		}
@@ -1021,6 +1021,12 @@ export class TimelineView extends ItemView {
 		this.composerTags = this.getComposerTags()
 			.filter((tag) => tag !== tagToRemove)
 			.join(", ");
+	}
+
+	private handleTagFilterToggle(tag: string): void {
+		this.filters.selectedTag = this.filters.selectedTag === tag ? "" : tag;
+		this.isFilterExpanded = true;
+		void this.refresh();
 	}
 
 	private openEntryMenu(event: MouseEvent, item: TimelineIndexItem): void {
