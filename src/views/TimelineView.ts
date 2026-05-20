@@ -1,16 +1,36 @@
-import { ItemView, Menu, Modal, Notice, Setting, TFile, TextComponent, WorkspaceLeaf } from "obsidian";
+import {
+	ItemView,
+	Menu,
+	Modal,
+	Notice,
+	Setting,
+	TFile,
+	TextComponent,
+	WorkspaceLeaf,
+	setIcon,
+} from "obsidian";
 
-import { filterTimeline, type TimelineDatePreset, type TimelineFilterState } from "../index/filterTimeline";
+import {
+	filterTimeline,
+	type TimelineDatePreset,
+	type TimelineFilterState,
+} from "../index/filterTimeline";
 import type PersonalTimelinePlugin from "../main";
 import type { TimelineAttachment } from "../models/TimelineAttachment";
-import type { ParsedTimelineEntry, TimelineIndexItem } from "../models/TimelineEntry";
+import type {
+	ParsedTimelineEntry,
+	TimelineIndexItem,
+} from "../models/TimelineEntry";
 import {
 	createPendingAttachmentFromFile,
 	getAudioExtension,
 	type PendingQuickAttachment,
 	revokePreview,
 } from "../quick-check-in/pendingAttachments";
-import { extractEditableMarkdownContent, type TimelineEntryEditInput } from "../storage/timelineRepository";
+import {
+	extractEditableMarkdownContent,
+	type TimelineEntryEditInput,
+} from "../storage/timelineRepository";
 import { canCreateQuickCheckIn, parseTags } from "../utils/tags";
 import { formatDateForFile, getNow } from "../utils/date";
 
@@ -31,6 +51,7 @@ export class TimelineView extends ItemView {
 	};
 
 	private composerTags = "";
+	private composerTagDraft = "";
 	private composerContent = "";
 	private pendingAttachments: PendingQuickAttachment[] = [];
 	private isComposerExpanded = false;
@@ -84,13 +105,21 @@ export class TimelineView extends ItemView {
 		const header = contentEl.createDiv({ cls: "timeline-header" });
 		const headerText = header.createDiv({ cls: "timeline-header-text" });
 		headerText.createEl("h2", { text: "Personal timeline" });
-		headerText.createEl("div", { cls: "timeline-date-label", text: describeDatePreset(this.filters, activeDate) });
-		const openDayButton = header.createEl("button", { text: "Open today note", cls: "timeline-header-button" });
-		openDayButton.addEventListener("click", () => {
-			void this.handleOpenSelectedSource(activeDate);
+		headerText.createEl("div", {
+			cls: "timeline-date-label",
+			text: describeDatePreset(this.filters, activeDate),
+		});
+		const createButton = header.createEl("button", {
+			text: "Create",
+			cls: "timeline-header-button",
+		});
+		createButton.addEventListener("click", () => {
+			this.isComposerExpanded = true;
+			void this.refresh();
 		});
 
-		const malformedEntryCount = this.plugin.timelineIndex.getMalformedEntryCount();
+		const malformedEntryCount =
+			this.plugin.timelineIndex.getMalformedEntryCount();
 		if (malformedEntryCount > 0) {
 			contentEl.createEl("div", {
 				cls: "timeline-warning-banner",
@@ -101,7 +130,9 @@ export class TimelineView extends ItemView {
 		this.renderComposer(contentEl, today);
 		this.renderToolbar(contentEl, allItems, today);
 
-		const listSection = contentEl.createDiv({ cls: "timeline-list-section" });
+		const listSection = contentEl.createDiv({
+			cls: "timeline-list-section",
+		});
 		listSection.createEl("div", {
 			cls: "timeline-list-summary",
 			text: `${describeDatePreset(this.filters, activeDate)} · ${filteredItems.length} entr${filteredItems.length === 1 ? "y" : "ies"}`,
@@ -115,7 +146,10 @@ export class TimelineView extends ItemView {
 			return;
 		}
 
-		const renderedItems = filteredItems.slice(0, TimelineView.MAX_RENDERED_ENTRIES);
+		const renderedItems = filteredItems.slice(
+			0,
+			TimelineView.MAX_RENDERED_ENTRIES,
+		);
 		if (filteredItems.length > renderedItems.length) {
 			listSection.createEl("p", {
 				cls: "timeline-list-summary",
@@ -123,13 +157,19 @@ export class TimelineView extends ItemView {
 			});
 		}
 
-		const list = listSection.createDiv({ cls: "timeline-list pt-timeline-list" });
+		const list = listSection.createDiv({
+			cls: "timeline-list pt-timeline-list",
+		});
 		for (const [date, entries] of groupEntriesByDate(renderedItems)) {
 			this.renderDayGroup(list, date, entries, today);
 		}
 	}
 
-	private renderToolbar(container: HTMLElement, items: TimelineIndexItem[], today: string): void {
+	private renderToolbar(
+		container: HTMLElement,
+		items: TimelineIndexItem[],
+		today: string,
+	): void {
 		const toolbar = container.createDiv({ cls: "timeline-toolbar" });
 		const summaryRow = toolbar.createDiv({ cls: "timeline-toolbar-row" });
 		summaryRow.createDiv({
@@ -137,7 +177,9 @@ export class TimelineView extends ItemView {
 			text: `${describeDatePreset(this.filters, this.getActiveDate(today))} · ${filterTimeline(items, this.filters, today).length} entries`,
 		});
 
-		const controls = summaryRow.createDiv({ cls: "timeline-toolbar-controls" });
+		const controls = summaryRow.createDiv({
+			cls: "timeline-toolbar-controls",
+		});
 		const searchToggleButton = controls.createEl("button", {
 			text: this.isSearchExpanded ? "Close search" : "Search",
 			cls: "timeline-filter-toggle",
@@ -185,7 +227,8 @@ export class TimelineView extends ItemView {
 		addOption(datePresetSelect, "custom", "Custom day");
 		datePresetSelect.value = this.filters.datePreset;
 		datePresetSelect.addEventListener("change", () => {
-			this.filters.datePreset = datePresetSelect.value as TimelineDatePreset;
+			this.filters.datePreset =
+				datePresetSelect.value as TimelineDatePreset;
 			if (this.filters.datePreset === "today") {
 				this.filters.customDate = today;
 			}
@@ -205,7 +248,9 @@ export class TimelineView extends ItemView {
 		});
 
 		if (this.filters.datePreset === "custom" || this.isFilterExpanded) {
-			const advancedFilters = toolbar.createDiv({ cls: "timeline-filter-advanced" });
+			const advancedFilters = toolbar.createDiv({
+				cls: "timeline-filter-advanced",
+			});
 			if (this.filters.datePreset === "custom") {
 				const customDateInput = advancedFilters.createEl("input", {
 					type: "date",
@@ -218,7 +263,9 @@ export class TimelineView extends ItemView {
 				});
 			}
 
-			const timeRow = advancedFilters.createDiv({ cls: "timeline-filter-time-row" });
+			const timeRow = advancedFilters.createDiv({
+				cls: "timeline-filter-time-row",
+			});
 			const startTimeInput = timeRow.createEl("input", { type: "time" });
 			startTimeInput.addClass("timeline-input");
 			startTimeInput.value = this.filters.startTime;
@@ -235,7 +282,6 @@ export class TimelineView extends ItemView {
 				void this.refresh();
 			});
 		}
-
 	}
 
 	private renderComposer(container: HTMLElement, today: string): void {
@@ -244,8 +290,19 @@ export class TimelineView extends ItemView {
 			const collapsedButton = composer.createEl("button", {
 				cls: "timeline-composer-collapsed",
 			});
-			collapsedButton.createSpan({ text: this.composerContent.trim() ? this.composerContent.trim() : "Quick check-in..." });
-			collapsedButton.createSpan({ cls: "timeline-composer-plus", text: "+" });
+			const collapsedLabel = collapsedButton.createDiv({
+				cls: "timeline-composer-collapsed-copy",
+			});
+			collapsedLabel.createSpan({
+				cls: "timeline-composer-collapsed-subtitle",
+				text: this.composerContent.trim()
+					? this.composerContent.trim()
+					: "Capture a note, tags, or attachments.",
+			});
+			const collapsedIcon = collapsedButton.createSpan({
+				cls: "timeline-composer-plus",
+			});
+			setIcon(collapsedIcon, "plus");
 			collapsedButton.addEventListener("click", () => {
 				this.isComposerExpanded = true;
 				void this.refresh();
@@ -254,7 +311,7 @@ export class TimelineView extends ItemView {
 		}
 
 		const contentInput = composer.createEl("textarea", {
-			placeholder: "What happened?",
+			placeholder: "Write your note or type # to add tags...",
 		});
 		contentInput.addClass("timeline-textarea");
 		contentInput.value = this.composerContent;
@@ -265,24 +322,95 @@ export class TimelineView extends ItemView {
 			void this.handlePaste(event);
 		});
 
-		const controls = composer.createDiv({ cls: "timeline-composer-inline" });
-		const tagsInput = controls.createEl("input", {
-			type: "text",
-			placeholder: "#tags",
+		const tagsRow = composer.createDiv({
+			cls: "timeline-composer-tags-row",
 		});
-		tagsInput.addClass("timeline-input");
-		tagsInput.addClass("timeline-tags-input");
-		tagsInput.value = this.composerTags;
+		const tags = this.getComposerTags();
+		if (tags.length > 0) {
+			const tagsList = tagsRow.createDiv({
+				cls: "timeline-composer-tag-list",
+			});
+			for (const tag of tags) {
+				const chip = tagsList.createDiv({ cls: "timeline-tag-chip" });
+				chip.createSpan({
+					cls: "timeline-tag-chip-label",
+					text: `#${tag}`,
+				});
+				const removeButton = chip.createEl("button", {
+					cls: "timeline-tag-chip-remove",
+					attr: { "aria-label": `Remove #${tag}` },
+				});
+				setIcon(removeButton, "x");
+				removeButton.addEventListener("click", () => {
+					this.removeComposerTag(tag);
+					void this.refresh();
+				});
+			}
+		}
+
+		const tagsInput = tagsRow.createEl("input", {
+			type: "text",
+			placeholder: tags.length > 0 ? "# Thêm nhân." : "# Add tags",
+		});
+		tagsInput.addClass("timeline-composer-tag-input");
+		tagsInput.value = this.composerTagDraft;
 		tagsInput.addEventListener("input", () => {
-			this.composerTags = tagsInput.value;
+			this.composerTagDraft = tagsInput.value;
+			if (/[,\s]$/.test(this.composerTagDraft)) {
+				this.commitComposerTagDraft();
+				void this.refresh();
+			}
+		});
+		tagsInput.addEventListener("keydown", (event) => {
+			if (event.key === "Enter" || event.key === ",") {
+				event.preventDefault();
+				if (this.commitComposerTagDraft()) {
+					void this.refresh();
+				}
+				return;
+			}
+
+			if (
+				event.key === "Backspace" &&
+				!tagsInput.value &&
+				tags.length > 0
+			) {
+				const lastTag = tags[tags.length - 1];
+				if (lastTag) {
+					this.removeComposerTag(lastTag);
+					void this.refresh();
+				}
+			}
 		});
 
-		const attachmentActions = controls.createDiv({ cls: "timeline-composer-actions" });
-		const addImageButton = attachmentActions.createEl("button", { text: "Add image" });
-		const addFileButton = attachmentActions.createEl("button", { text: "Add file" });
-		const recordAudioButton = attachmentActions.createEl("button", {
-			text: this.isRecording ? "Stop recording" : "Record audio",
+		if (this.pendingAttachments.length > 0) {
+			this.renderPendingAttachments(composer);
+		}
+
+		const footer = composer.createDiv({ cls: "timeline-composer-footer" });
+		const attachmentActions = footer.createDiv({
+			cls: "timeline-composer-tools",
 		});
+		const addImageButton = attachmentActions.createEl("button", {
+			cls: "timeline-icon-button",
+			attr: { "aria-label": "Add image", type: "button" },
+		});
+		setIcon(addImageButton, "image");
+		const addFileButton = attachmentActions.createEl("button", {
+			cls: "timeline-icon-button",
+			attr: { "aria-label": "Add file", type: "button" },
+		});
+		setIcon(addFileButton, "paperclip");
+		const recordAudioButton = attachmentActions.createEl("button", {
+			cls: `timeline-icon-button${this.isRecording ? " is-recording" : ""}`,
+			attr: {
+				"aria-label": this.isRecording
+					? "Stop recording"
+					: "Record audio",
+				type: "button",
+			},
+		});
+		setIcon(recordAudioButton, this.isRecording ? "square" : "mic");
 
 		const imageInput = composer.createEl("input", {
 			type: "file",
@@ -310,7 +438,10 @@ export class TimelineView extends ItemView {
 
 		imageInput.addEventListener("change", () => {
 			if (imageInput.files) {
-				void this.addPendingFiles(Array.from(imageInput.files), "image");
+				void this.addPendingFiles(
+					Array.from(imageInput.files),
+					"image",
+				);
 				imageInput.value = "";
 			}
 		});
@@ -322,46 +453,42 @@ export class TimelineView extends ItemView {
 			}
 		});
 
-		const actions = controls.createDiv({ cls: "timeline-composer-actions" });
-		const collapseButton = actions.createEl("button", { text: "Cancel" });
+		const actions = footer.createDiv({ cls: "timeline-composer-actions" });
+		const collapseButton = actions.createEl("button", {
+			text: "Cancel",
+			cls: "timeline-composer-secondary-button",
+		});
 		collapseButton.addEventListener("click", () => {
 			this.handleCollapseComposer();
 		});
 		const submitButton = actions.createEl("button", {
 			text: "Send",
-			cls: "mod-cta",
+			cls: "mod-cta timeline-composer-submit",
 		});
+		setIcon(submitButton, "send");
 
 		submitButton.addEventListener("click", () => {
 			void this.handleSubmit(today, submitButton);
 		});
-
-		if (this.pendingAttachments.length > 0) {
-			this.renderPendingAttachments(composer);
-		}
 	}
 
 	private renderPendingAttachments(container: HTMLElement): void {
-		const section = container.createDiv({ cls: "timeline-pending-section" });
-		const summaryRow = section.createDiv({ cls: "timeline-pending-header" });
-		summaryRow.createEl("div", {
-			cls: "timeline-pending-title",
-			text: `📎 ${this.pendingAttachments.length} attachment${this.pendingAttachments.length === 1 ? "" : "s"}`,
+		const section = container.createDiv({
+			cls: "timeline-pending-section",
 		});
-		const clearButton = summaryRow.createEl("button", { text: "Clear" });
-		clearButton.addEventListener("click", () => {
-			this.releasePreviewUrls();
-			this.pendingAttachments = [];
-			void this.refresh();
-		});
+		const imageRow = section.createDiv({ cls: "timeline-pending-list timeline-pending-images" });
+		const fileRow = section.createDiv({ cls: "timeline-pending-list timeline-pending-files" });
+		const audioRow = section.createDiv({ cls: "timeline-pending-list timeline-pending-audios" });
 
-		const list = section.createDiv({ cls: "timeline-pending-list" });
 		this.pendingAttachments.forEach((attachment, index) => {
-			const card = list.createDiv({ cls: "timeline-pending-card" });
-			card.createEl("strong", { text: attachment.name });
-			card.createEl("div", {
-				cls: "timeline-pending-meta",
-				text: `${attachment.type}${attachment.mime ? ` • ${attachment.mime}` : ""}`,
+			const parent =
+				attachment.type === "image"
+					? imageRow
+					: attachment.type === "file"
+						? fileRow
+						: audioRow;
+			const card = parent.createDiv({
+				cls: `timeline-pending-card ${getPendingAttachmentCardClass(attachment)}`,
 			});
 
 			if (attachment.type === "image" && attachment.previewUrl) {
@@ -369,17 +496,39 @@ export class TimelineView extends ItemView {
 					cls: "timeline-attachment-image",
 					attr: { src: attachment.previewUrl, alt: attachment.name },
 				});
-			}
-
-			if (attachment.type === "audio" && attachment.previewUrl) {
-				const audio = card.createEl("audio", {
-					cls: "timeline-attachment-audio",
+			} else if (attachment.type === "audio" && attachment.previewUrl) {
+				const audioSummary = card.createDiv({
+					cls: "timeline-pending-audio-row",
 				});
-				audio.controls = true;
-				audio.src = attachment.previewUrl;
+				audioSummary.createDiv({ cls: "timeline-pending-audio-dot" });
+				audioSummary.createEl("strong", {
+					cls: "timeline-pending-audio-title",
+					text: "Recording",
+				});
+				audioSummary.createEl("span", {
+					cls: "timeline-pending-audio-meta",
+					text: formatAttachmentSize(attachment.data.byteLength),
+				});
+			} else if (attachment.type === "file") {
+				const fileSummary = card.createDiv({ cls: "timeline-pending-file-row" });
+				const fileIcon = fileSummary.createDiv({ cls: "timeline-pending-file-icon" });
+				setIcon(fileIcon, "file-down");
+				const fileBody = fileSummary.createDiv({ cls: "timeline-pending-file-body" });
+				fileBody.createEl("strong", {
+					cls: "timeline-pending-file-name",
+					text: attachment.name,
+				});
+				fileBody.createEl("div", {
+					cls: "timeline-pending-file-size",
+					text: formatAttachmentSize(attachment.data.byteLength),
+				});
 			}
 
-			const removeButton = card.createEl("button", { text: "Remove" });
+			const removeButton = card.createEl("button", {
+				cls: "timeline-pending-remove",
+				attr: { "aria-label": `Remove ${attachment.name}` },
+			});
+			setIcon(removeButton, "x");
 			removeButton.addEventListener("click", () => {
 				const target = this.pendingAttachments[index];
 				if (!target) {
@@ -393,7 +542,12 @@ export class TimelineView extends ItemView {
 		});
 	}
 
-	private renderDayGroup(container: HTMLElement, date: string, entries: TimelineIndexItem[], today: string): void {
+	private renderDayGroup(
+		container: HTMLElement,
+		date: string,
+		entries: TimelineIndexItem[],
+		today: string,
+	): void {
 		const groupEl = container.createDiv({ cls: "pt-day-group" });
 		groupEl.createDiv({
 			cls: "pt-day-header",
@@ -402,11 +556,19 @@ export class TimelineView extends ItemView {
 
 		const timelineEl = groupEl.createDiv({ cls: "pt-timeline" });
 		entries.forEach((entry, index) => {
-			this.renderTimelineEntry(timelineEl, entry, index === entries.length - 1);
+			this.renderTimelineEntry(
+				timelineEl,
+				entry,
+				index === entries.length - 1,
+			);
 		});
 	}
 
-	private renderTimelineEntry(container: HTMLElement, item: TimelineIndexItem, isLast: boolean): void {
+	private renderTimelineEntry(
+		container: HTMLElement,
+		item: TimelineIndexItem,
+		isLast: boolean,
+	): void {
 		const entryEl = container.createDiv({ cls: "pt-entry" });
 		const railEl = entryEl.createDiv({ cls: "pt-rail" });
 		railEl.createDiv({
@@ -440,7 +602,10 @@ export class TimelineView extends ItemView {
 		if (item.tags.length > 0) {
 			const tagsEl = mainEl.createDiv({ cls: "pt-entry-tags" });
 			for (const tag of item.tags) {
-				tagsEl.createSpan({ cls: "pt-tag", text: tag.startsWith("#") ? tag : `#${tag}` });
+				tagsEl.createSpan({
+					cls: "pt-tag",
+					text: tag.startsWith("#") ? tag : `#${tag}`,
+				});
 			}
 		}
 
@@ -453,9 +618,15 @@ export class TimelineView extends ItemView {
 		container: HTMLElement,
 		attachments: TimelineAttachment[],
 	): void {
-		const imageAttachments = attachments.filter((attachment) => attachment.type === "image");
-		const audioAttachments = attachments.filter((attachment) => attachment.type === "audio");
-		const fileAttachments = attachments.filter((attachment) => attachment.type === "file");
+		const imageAttachments = attachments.filter(
+			(attachment) => attachment.type === "image",
+		);
+		const audioAttachments = attachments.filter(
+			(attachment) => attachment.type === "audio",
+		);
+		const fileAttachments = attachments.filter(
+			(attachment) => attachment.type === "file",
+		);
 		const summaryParts: string[] = [];
 
 		if (imageAttachments.length > 0) {
@@ -475,18 +646,28 @@ export class TimelineView extends ItemView {
 		}
 
 		const summary = container.createDiv({ cls: "pt-entry-attachments" });
-		summary.setText(`📎 ${attachments.length} attachments · ${summaryParts.join(" · ")}`);
+		summary.setText(
+			`📎 ${attachments.length} attachments · ${summaryParts.join(" · ")}`,
+		);
 
-		const detailList = container.createDiv({ cls: "pt-expanded-attachments" });
+		const detailList = container.createDiv({
+			cls: "pt-expanded-attachments",
+		});
 		if (imageAttachments.length > 0) {
-			const imageGrid = detailList.createDiv({ cls: "timeline-attachment-image-grid" });
+			const imageGrid = detailList.createDiv({
+				cls: "timeline-attachment-image-grid",
+			});
 			for (const attachment of imageAttachments) {
-				const abstractFile = this.plugin.app.vault.getAbstractFileByPath(attachment.path);
+				const abstractFile =
+					this.plugin.app.vault.getAbstractFileByPath(
+						attachment.path,
+					);
 				if (!(abstractFile instanceof TFile)) {
 					continue;
 				}
 
-				const resourcePath = this.plugin.app.vault.getResourcePath(abstractFile);
+				const resourcePath =
+					this.plugin.app.vault.getResourcePath(abstractFile);
 				const displayName = attachment.name ?? abstractFile.name;
 				imageGrid.createEl("img", {
 					cls: "timeline-attachment-image",
@@ -496,7 +677,9 @@ export class TimelineView extends ItemView {
 		}
 
 		for (const attachment of audioAttachments) {
-			const abstractFile = this.plugin.app.vault.getAbstractFileByPath(attachment.path);
+			const abstractFile = this.plugin.app.vault.getAbstractFileByPath(
+				attachment.path,
+			);
 			if (!(abstractFile instanceof TFile)) {
 				detailList.createEl("div", {
 					cls: "timeline-attachment-missing",
@@ -505,28 +688,38 @@ export class TimelineView extends ItemView {
 				continue;
 			}
 
-			const resourcePath = this.plugin.app.vault.getResourcePath(abstractFile);
+			const resourcePath =
+				this.plugin.app.vault.getResourcePath(abstractFile);
 			const displayName = attachment.name ?? abstractFile.name;
 			detailList.createEl("div", {
 				cls: "pt-expanded-attachment",
 				text: `🎙 ${displayName}`,
 			});
-			const audio = detailList.createEl("audio", { cls: "timeline-attachment-audio pt-audio-player" });
+			const audio = detailList.createEl("audio", {
+				cls: "timeline-attachment-audio pt-audio-player",
+			});
 			audio.controls = true;
 			audio.src = resourcePath;
 		}
 	}
 
-	private async addPendingFiles(files: File[], typeHint: "image" | "file"): Promise<void> {
+	private async addPendingFiles(
+		files: File[],
+		typeHint: "image" | "file",
+	): Promise<void> {
 		for (const file of files) {
-			this.pendingAttachments.push(await createPendingAttachmentFromFile(file, typeHint));
+			this.pendingAttachments.push(
+				await createPendingAttachmentFromFile(file, typeHint),
+			);
 		}
 		await this.refresh();
 	}
 
 	private async handlePaste(event: ClipboardEvent): Promise<void> {
 		const clipboardItems = Array.from(event.clipboardData?.items ?? []);
-		const imageItems = clipboardItems.filter((item) => item.type.startsWith("image/"));
+		const imageItems = clipboardItems.filter((item) =>
+			item.type.startsWith("image/"),
+		);
 		if (imageItems.length === 0) {
 			return;
 		}
@@ -541,19 +734,26 @@ export class TimelineView extends ItemView {
 			const file = new File([blob], `pasted-image-${Date.now()}.png`, {
 				type: blob.type || "image/png",
 			});
-			this.pendingAttachments.push(await createPendingAttachmentFromFile(file, "image"));
+			this.pendingAttachments.push(
+				await createPendingAttachmentFromFile(file, "image"),
+			);
 		}
 		await this.refresh();
 	}
 
 	private async startRecording(): Promise<void> {
-		if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+		if (
+			!navigator.mediaDevices?.getUserMedia ||
+			typeof MediaRecorder === "undefined"
+		) {
 			new Notice("Audio recording is not supported in this environment.");
 			return;
 		}
 
 		try {
-			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+			const stream = await navigator.mediaDevices.getUserMedia({
+				audio: true,
+			});
 			this.audioChunks = [];
 			this.mediaRecorder = new MediaRecorder(stream);
 			this.isRecording = true;
@@ -563,11 +763,17 @@ export class TimelineView extends ItemView {
 				}
 			});
 			this.mediaRecorder.addEventListener("stop", () => {
-				const blob = new Blob(this.audioChunks, { type: this.mediaRecorder?.mimeType || "audio/webm" });
-				const extension = getAudioExtension(blob.type);
-				const file = new File([blob], `recording-${Date.now()}${extension}`, {
-					type: blob.type,
+				const blob = new Blob(this.audioChunks, {
+					type: this.mediaRecorder?.mimeType || "audio/webm",
 				});
+				const extension = getAudioExtension(blob.type);
+				const file = new File(
+					[blob],
+					`recording-${Date.now()}${extension}`,
+					{
+						type: blob.type,
+					},
+				);
 				void this.finishRecording(file, stream);
 			});
 			this.mediaRecorder.start();
@@ -588,6 +794,7 @@ export class TimelineView extends ItemView {
 
 	private clearComposer(): void {
 		this.composerTags = "";
+		this.composerTagDraft = "";
 		this.composerContent = "";
 		this.releasePreviewUrls();
 		this.pendingAttachments = [];
@@ -600,9 +807,19 @@ export class TimelineView extends ItemView {
 		}
 	}
 
-	private async handleSubmit(today: string, submitButton: HTMLButtonElement): Promise<void> {
-		const parsedTags = parseTags(this.composerTags);
-		if (!canCreateQuickCheckIn(this.composerContent, parsedTags, this.pendingAttachments)) {
+	private async handleSubmit(
+		today: string,
+		submitButton: HTMLButtonElement,
+	): Promise<void> {
+		this.commitComposerTagDraft();
+		const parsedTags = this.getComposerTags();
+		if (
+			!canCreateQuickCheckIn(
+				this.composerContent,
+				parsedTags,
+				this.pendingAttachments,
+			)
+		) {
 			new Notice("Nothing to save.");
 			return;
 		}
@@ -635,7 +852,10 @@ export class TimelineView extends ItemView {
 	}
 
 	private async handleOpenSelectedSource(activeDate: string): Promise<void> {
-		const file = await this.plugin.timelineRepository.getTimelineFileForDate(activeDate);
+		const file =
+			await this.plugin.timelineRepository.getTimelineFileForDate(
+				activeDate,
+			);
 		if (!file) {
 			new Notice("No timeline file exists for the selected day yet.");
 			return;
@@ -645,7 +865,10 @@ export class TimelineView extends ItemView {
 	}
 
 	private async handleEditEntry(item: TimelineIndexItem): Promise<void> {
-		const entry = await this.plugin.timelineRepository.getEntryById(item.sourcePath, item.id);
+		const entry = await this.plugin.timelineRepository.getEntryById(
+			item.sourcePath,
+			item.id,
+		);
 		if (!entry) {
 			new Notice("Timeline entry is unavailable.");
 			return;
@@ -656,7 +879,10 @@ export class TimelineView extends ItemView {
 
 	private async handleDuplicateEntry(item: TimelineIndexItem): Promise<void> {
 		try {
-			await this.plugin.timelineRepository.duplicateEntry(item.sourcePath, item.id);
+			await this.plugin.timelineRepository.duplicateEntry(
+				item.sourcePath,
+				item.id,
+			);
 			await this.plugin.timelineIndex.rebuild();
 			await this.refresh();
 			new Notice("Entry duplicated.");
@@ -677,7 +903,10 @@ export class TimelineView extends ItemView {
 		}
 
 		try {
-			await this.plugin.timelineRepository.deleteEntry(item.sourcePath, item.id);
+			await this.plugin.timelineRepository.deleteEntry(
+				item.sourcePath,
+				item.id,
+			);
 			await this.plugin.timelineIndex.rebuild();
 			await this.refresh();
 			new Notice("Entry deleted.");
@@ -686,8 +915,13 @@ export class TimelineView extends ItemView {
 		}
 	}
 
-	private async finishRecording(file: File, stream: MediaStream): Promise<void> {
-		this.pendingAttachments.push(await createPendingAttachmentFromFile(file, "audio"));
+	private async finishRecording(
+		file: File,
+		stream: MediaStream,
+	): Promise<void> {
+		this.pendingAttachments.push(
+			await createPendingAttachmentFromFile(file, "audio"),
+		);
 		stream.getTracks().forEach((track) => track.stop());
 		this.mediaRecorder = null;
 		this.audioChunks = [];
@@ -733,7 +967,12 @@ export class TimelineView extends ItemView {
 	}
 
 	private handleCollapseComposer(): void {
-		if (this.composerTags.trim() || this.composerContent.trim() || this.pendingAttachments.length > 0) {
+		if (
+			this.composerTags.trim() ||
+			this.composerTagDraft.trim() ||
+			this.composerContent.trim() ||
+			this.pendingAttachments.length > 0
+		) {
 			void confirmAction(
 				this.plugin,
 				"Discard draft",
@@ -754,39 +993,87 @@ export class TimelineView extends ItemView {
 		void this.refresh();
 	}
 
+	private getComposerTags(): string[] {
+		return parseTags(
+			[this.composerTags, this.composerTagDraft]
+				.filter(Boolean)
+				.join(" "),
+		);
+	}
+
+	private commitComposerTagDraft(): boolean {
+		const parsedDraft = parseTags(this.composerTagDraft);
+		if (parsedDraft.length === 0) {
+			this.composerTagDraft = "";
+			return false;
+		}
+
+		this.composerTags = parseTags(
+			[this.composerTags, parsedDraft.join(" ")]
+				.filter(Boolean)
+				.join(" "),
+		).join(", ");
+		this.composerTagDraft = "";
+		return true;
+	}
+
+	private removeComposerTag(tagToRemove: string): void {
+		this.composerTags = this.getComposerTags()
+			.filter((tag) => tag !== tagToRemove)
+			.join(", ");
+	}
+
 	private openEntryMenu(event: MouseEvent, item: TimelineIndexItem): void {
 		const menu = new Menu();
 		menu.addItem((menuItem) =>
-			menuItem.setTitle("Edit").setIcon("pencil").onClick(() => {
-				void this.handleEditEntry(item);
-			}),
+			menuItem
+				.setTitle("Edit")
+				.setIcon("pencil")
+				.onClick(() => {
+					void this.handleEditEntry(item);
+				}),
 		);
 		menu.addItem((menuItem) =>
-			menuItem.setTitle("Duplicate").setIcon("copy").onClick(() => {
-				void this.handleDuplicateEntry(item);
-			}),
+			menuItem
+				.setTitle("Duplicate")
+				.setIcon("copy")
+				.onClick(() => {
+					void this.handleDuplicateEntry(item);
+				}),
 		);
 		menu.addItem((menuItem) =>
-			menuItem.setTitle("Open source").setIcon("external-link").onClick(() => {
-				const file = this.plugin.app.vault.getAbstractFileByPath(item.sourcePath);
-				if (file instanceof TFile) {
-					void this.plugin.openTimelineSource(file, item.id);
-				} else {
-					new Notice("Source file is unavailable.");
-				}
-			}),
+			menuItem
+				.setTitle("Open source")
+				.setIcon("external-link")
+				.onClick(() => {
+					const file = this.plugin.app.vault.getAbstractFileByPath(
+						item.sourcePath,
+					);
+					if (file instanceof TFile) {
+						void this.plugin.openTimelineSource(file, item.id);
+					} else {
+						new Notice("Source file is unavailable.");
+					}
+				}),
 		);
 		menu.addSeparator();
 		menu.addItem((menuItem) =>
-			menuItem.setTitle("Delete").setIcon("trash").onClick(() => {
-				void this.handleDeleteEntry(item);
-			}),
+			menuItem
+				.setTitle("Delete")
+				.setIcon("trash")
+				.onClick(() => {
+					void this.handleDeleteEntry(item);
+				}),
 		);
 		menu.showAtMouseEvent(event);
 	}
 }
 
-function addOption(select: HTMLSelectElement, value: string, label: string): void {
+function addOption(
+	select: HTMLSelectElement,
+	value: string,
+	label: string,
+): void {
 	select.createEl("option", { value, text: label });
 }
 
@@ -805,7 +1092,10 @@ function shiftDate(dateText: string, days: number): string {
 	].join("-");
 }
 
-function describeDatePreset(filters: TimelineFilterState, activeDate: string): string {
+function describeDatePreset(
+	filters: TimelineFilterState,
+	activeDate: string,
+): string {
 	switch (filters.datePreset) {
 		case "today":
 			return "Today";
@@ -820,7 +1110,9 @@ function describeDatePreset(filters: TimelineFilterState, activeDate: string): s
 	}
 }
 
-function groupEntriesByDate(entries: TimelineIndexItem[]): Array<[string, TimelineIndexItem[]]> {
+function groupEntriesByDate(
+	entries: TimelineIndexItem[],
+): Array<[string, TimelineIndexItem[]]> {
 	const groups = new Map<string, TimelineIndexItem[]>();
 
 	for (const entry of entries) {
@@ -830,10 +1122,14 @@ function groupEntriesByDate(entries: TimelineIndexItem[]): Array<[string, Timeli
 	}
 
 	for (const list of groups.values()) {
-		list.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+		list.sort((left, right) =>
+			right.createdAt.localeCompare(left.createdAt),
+		);
 	}
 
-	return [...groups.entries()].sort(([left], [right]) => right.localeCompare(left));
+	return [...groups.entries()].sort(([left], [right]) =>
+		right.localeCompare(left),
+	);
 }
 
 function formatDisplayDate(date: string): string {
@@ -880,7 +1176,10 @@ class EditEntryModal extends Modal {
 		super(plugin.app);
 		this.timeValue = entry.meta.time;
 		this.tagsValue = entry.meta.tags.join(", ");
-		this.contentValue = extractEditableMarkdownContent(entry.markdown, entry.meta.attachments);
+		this.contentValue = extractEditableMarkdownContent(
+			entry.markdown,
+			entry.meta.attachments,
+		);
 	}
 
 	onOpen(): void {
@@ -890,17 +1189,29 @@ class EditEntryModal extends Modal {
 
 		contentEl.createEl("h2", { text: "Edit timeline entry" });
 
-		const timeInput = createTextSetting(contentEl, "Time", this.timeValue, (value) => {
-			this.timeValue = value;
-		});
+		const timeInput = createTextSetting(
+			contentEl,
+			"Time",
+			this.timeValue,
+			(value) => {
+				this.timeValue = value;
+			},
+		);
 		timeInput.inputEl.type = "time";
 
-		const tagsInput = createTextSetting(contentEl, "Tags", this.tagsValue, (value) => {
-			this.tagsValue = value;
-		});
+		const tagsInput = createTextSetting(
+			contentEl,
+			"Tags",
+			this.tagsValue,
+			(value) => {
+				this.tagsValue = value;
+			},
+		);
 		tagsInput.setPlaceholder("Work, reflection");
 
-		const contentSetting = new Setting(contentEl).setName("Content").setDesc("Edit the Markdown body.");
+		const contentSetting = new Setting(contentEl)
+			.setName("Content")
+			.setDesc("Edit the Markdown body.");
 		const textarea = contentSetting.controlEl.createEl("textarea", {
 			cls: "timeline-modal-textarea",
 		});
@@ -910,7 +1221,10 @@ class EditEntryModal extends Modal {
 		});
 
 		const actions = contentEl.createDiv({ cls: "timeline-modal-actions" });
-		const saveButton = actions.createEl("button", { text: "Save", cls: "mod-cta" });
+		const saveButton = actions.createEl("button", {
+			text: "Save",
+			cls: "mod-cta",
+		});
 		const cancelButton = actions.createEl("button", { text: "Cancel" });
 
 		saveButton.addEventListener("click", () => {
@@ -937,7 +1251,11 @@ class EditEntryModal extends Modal {
 				content: this.contentValue,
 				tags: parseTags(this.tagsValue),
 			};
-			await this.plugin.timelineRepository.updateEntry(this.sourcePath, this.entry.meta.id, input);
+			await this.plugin.timelineRepository.updateEntry(
+				this.sourcePath,
+				this.entry.meta.id,
+				input,
+			);
 			await this.plugin.timelineIndex.rebuild();
 			await this.plugin.refreshTimelineViews();
 			new Notice("Entry updated.");
@@ -947,6 +1265,31 @@ class EditEntryModal extends Modal {
 			saveButton.disabled = false;
 		}
 	}
+}
+
+function getPendingAttachmentCardClass(attachment: PendingQuickAttachment): string {
+	switch (attachment.type) {
+		case "image":
+			return "is-image";
+		case "audio":
+			return "is-audio";
+		case "file":
+			return "is-file";
+		default:
+			return "";
+	}
+}
+
+function formatAttachmentSize(bytes: number): string {
+	if (bytes < 1024) {
+		return `${bytes} B`;
+	}
+
+	if (bytes < 1024 * 1024) {
+		return `${(bytes / 1024).toFixed(1)} KB`;
+	}
+
+	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function createTextSetting(
@@ -979,7 +1322,13 @@ function confirmAction(
 	confirmLabel: string,
 ): Promise<boolean> {
 	return new Promise((resolve) => {
-		new ConfirmActionModal(plugin, title, message, confirmLabel, resolve).open();
+		new ConfirmActionModal(
+			plugin,
+			title,
+			message,
+			confirmLabel,
+			resolve,
+		).open();
 	});
 }
 

@@ -1,4 +1,4 @@
-import { Modal, Notice } from "obsidian";
+import { Modal, Notice, setIcon } from "obsidian";
 
 import type PersonalTimelinePlugin from "../main";
 import {
@@ -16,6 +16,7 @@ interface QuickCheckInModalOptions {
 export class QuickCheckInModal extends Modal {
 	private content = "";
 	private tagsInput = "";
+	private tagsDraft = "";
 	private attachments: PendingQuickAttachment[] = [];
 	private isRecording = false;
 	private mediaRecorder: MediaRecorder | null = null;
@@ -39,7 +40,7 @@ export class QuickCheckInModal extends Modal {
 
 		this.contentTextarea = contentEl.createEl("textarea", {
 			cls: "pt-checkin-modal-content",
-			attr: { placeholder: "What happened?" },
+			attr: { placeholder: "Write your note or type # to add tags..." },
 		});
 		this.contentTextarea.value = this.content;
 		this.contentTextarea.addEventListener("input", () => {
@@ -52,20 +53,9 @@ export class QuickCheckInModal extends Modal {
 			}
 		});
 
-		const tagsInput = contentEl.createEl("input", {
-			cls: "pt-checkin-modal-tags",
-			attr: {
-				type: "text",
-				placeholder: "#tags",
-			},
-		});
-		tagsInput.value = this.tagsInput;
-		tagsInput.addEventListener("input", () => {
-			this.tagsInput = tagsInput.value;
-		});
-
-		this.renderAttachmentActions(contentEl);
 		this.renderAttachments(contentEl);
+		this.renderTags(contentEl);
+		this.renderAttachmentActions(contentEl);
 		this.renderFooter(contentEl);
 
 		window.setTimeout(() => {
@@ -85,11 +75,24 @@ export class QuickCheckInModal extends Modal {
 
 	private renderAttachmentActions(container: HTMLElement): void {
 		const row = container.createDiv({ cls: "pt-checkin-modal-actions" });
-		const imageButton = row.createEl("button", { text: "Add image" });
-		const fileButton = row.createEl("button", { text: "Add file" });
-		const audioButton = row.createEl("button", {
-			text: this.isRecording ? "Stop recording" : "Record audio",
+		const imageButton = row.createEl("button", {
+			cls: "timeline-icon-button",
+			attr: { "aria-label": "Add image", type: "button" },
 		});
+		setIcon(imageButton, "image");
+		const fileButton = row.createEl("button", {
+			cls: "timeline-icon-button",
+			attr: { "aria-label": "Add file", type: "button" },
+		});
+		setIcon(fileButton, "paperclip");
+		const audioButton = row.createEl("button", {
+			cls: `timeline-icon-button${this.isRecording ? " is-recording" : ""}`,
+			attr: {
+				"aria-label": this.isRecording ? "Stop recording" : "Record audio",
+				type: "button",
+			},
+		});
+		setIcon(audioButton, this.isRecording ? "square" : "mic");
 
 		const imageInput = container.createEl("input", {
 			type: "file",
@@ -130,31 +133,81 @@ export class QuickCheckInModal extends Modal {
 		});
 	}
 
+	private renderTags(container: HTMLElement): void {
+		const tagsRow = container.createDiv({ cls: "timeline-composer-tags-row" });
+		const tags = this.getTags();
+		if (tags.length > 0) {
+			const tagsList = tagsRow.createDiv({ cls: "timeline-composer-tag-list" });
+			for (const tag of tags) {
+				const chip = tagsList.createDiv({ cls: "timeline-tag-chip" });
+				chip.createSpan({
+					cls: "timeline-tag-chip-label",
+					text: `#${tag}`,
+				});
+				const removeButton = chip.createEl("button", {
+					cls: "timeline-tag-chip-remove",
+					attr: { "aria-label": `Remove #${tag}` },
+				});
+				setIcon(removeButton, "x");
+				removeButton.addEventListener("click", () => {
+					this.removeTag(tag);
+					this.redraw();
+				});
+			}
+		}
+
+		const tagsInput = tagsRow.createEl("input", {
+			type: "text",
+			placeholder: tags.length > 0 ? "# Add tag" : "# Add tags",
+		});
+		tagsInput.addClass("timeline-composer-tag-input");
+		tagsInput.value = this.tagsDraft;
+		tagsInput.addEventListener("input", () => {
+			this.tagsDraft = tagsInput.value;
+			if (/[,\s]$/.test(this.tagsDraft)) {
+				this.commitTagDraft();
+				this.redraw();
+			}
+		});
+		tagsInput.addEventListener("keydown", (event) => {
+			if (event.key === "Enter" || event.key === ",") {
+				event.preventDefault();
+				if (this.commitTagDraft()) {
+					this.redraw();
+				}
+				return;
+			}
+
+			if (event.key === "Backspace" && !tagsInput.value) {
+				const currentTags = this.getTags();
+				const lastTag = currentTags[currentTags.length - 1];
+				if (lastTag) {
+					this.removeTag(lastTag);
+					this.redraw();
+				}
+			}
+		});
+	}
+
 	private renderAttachments(container: HTMLElement): void {
 		if (this.attachments.length === 0) {
 			return;
 		}
 
 		const section = container.createDiv({ cls: "timeline-pending-section" });
-		const header = section.createDiv({ cls: "timeline-pending-header" });
-		header.createEl("div", {
-			cls: "timeline-pending-title",
-			text: `📎 ${this.attachments.length} attachment${this.attachments.length === 1 ? "" : "s"}`,
-		});
-		const clearButton = header.createEl("button", { text: "Clear" });
-		clearButton.addEventListener("click", () => {
-			this.releasePreviewUrls();
-			this.attachments = [];
-			this.redraw();
-		});
+		const imageRow = section.createDiv({ cls: "timeline-pending-list timeline-pending-images" });
+		const fileRow = section.createDiv({ cls: "timeline-pending-list timeline-pending-files" });
+		const audioRow = section.createDiv({ cls: "timeline-pending-list timeline-pending-audios" });
 
-		const list = section.createDiv({ cls: "timeline-pending-list" });
 		this.attachments.forEach((attachment, index) => {
-			const card = list.createDiv({ cls: "timeline-pending-card" });
-			card.createEl("strong", { text: attachment.name });
-			card.createEl("div", {
-				cls: "timeline-pending-meta",
-				text: `${attachment.type}${attachment.mime ? ` • ${attachment.mime}` : ""}`,
+			const parent =
+				attachment.type === "image"
+					? imageRow
+					: attachment.type === "file"
+						? fileRow
+						: audioRow;
+			const card = parent.createDiv({
+				cls: `timeline-pending-card ${getModalAttachmentCardClass(attachment)}`,
 			});
 
 			if (attachment.type === "image" && attachment.previewUrl) {
@@ -162,15 +215,37 @@ export class QuickCheckInModal extends Modal {
 					cls: "timeline-attachment-image",
 					attr: { src: attachment.previewUrl, alt: attachment.name },
 				});
+			} else if (attachment.type === "audio") {
+				const audioSummary = card.createDiv({ cls: "timeline-pending-audio-row" });
+				audioSummary.createDiv({ cls: "timeline-pending-audio-dot" });
+				audioSummary.createEl("strong", {
+					cls: "timeline-pending-audio-title",
+					text: "Recording",
+				});
+				audioSummary.createEl("span", {
+					cls: "timeline-pending-audio-meta",
+					text: formatModalAttachmentSize(attachment.data.byteLength),
+				});
+			} else if (attachment.type === "file") {
+				const fileSummary = card.createDiv({ cls: "timeline-pending-file-row" });
+				const fileIcon = fileSummary.createDiv({ cls: "timeline-pending-file-icon" });
+				setIcon(fileIcon, "file-down");
+				const fileBody = fileSummary.createDiv({ cls: "timeline-pending-file-body" });
+				fileBody.createEl("strong", {
+					cls: "timeline-pending-file-name",
+					text: attachment.name,
+				});
+				fileBody.createEl("div", {
+					cls: "timeline-pending-file-size",
+					text: formatModalAttachmentSize(attachment.data.byteLength),
+				});
 			}
 
-			if (attachment.type === "audio" && attachment.previewUrl) {
-				const audio = card.createEl("audio", { cls: "timeline-attachment-audio" });
-				audio.controls = true;
-				audio.src = attachment.previewUrl;
-			}
-
-			const removeButton = card.createEl("button", { text: "Remove" });
+			const removeButton = card.createEl("button", {
+				cls: "timeline-pending-remove",
+				attr: { "aria-label": `Remove ${attachment.name}` },
+			});
+			setIcon(removeButton, "x");
 			removeButton.addEventListener("click", () => {
 				const target = this.attachments[index];
 				if (!target) {
@@ -186,11 +261,15 @@ export class QuickCheckInModal extends Modal {
 
 	private renderFooter(container: HTMLElement): void {
 		const footer = container.createDiv({ cls: "pt-checkin-modal-footer" });
-		const cancelButton = footer.createEl("button", { text: "Cancel" });
+		const cancelButton = footer.createEl("button", {
+			text: "Cancel",
+			cls: "timeline-composer-secondary-button",
+		});
 		const createButton = footer.createEl("button", {
-			cls: "mod-cta",
+			cls: "mod-cta timeline-composer-submit",
 			text: "Create",
 		});
+		setIcon(createButton, "send");
 
 		cancelButton.addEventListener("click", () => this.close());
 		createButton.addEventListener("click", () => {
@@ -200,7 +279,8 @@ export class QuickCheckInModal extends Modal {
 
 	private async submit(): Promise<void> {
 		const content = this.content.trim();
-		const tags = parseTags(this.tagsInput);
+		this.commitTagDraft();
+		const tags = this.getTags();
 		if (!canCreateQuickCheckIn(content, tags, this.attachments)) {
 			new Notice("Nothing to save.");
 			return;
@@ -298,7 +378,54 @@ export class QuickCheckInModal extends Modal {
 		}
 	}
 
+	private getTags(): string[] {
+		return parseTags([this.tagsInput, this.tagsDraft].filter(Boolean).join(" "));
+	}
+
+	private commitTagDraft(): boolean {
+		const parsedDraft = parseTags(this.tagsDraft);
+		if (parsedDraft.length === 0) {
+			this.tagsDraft = "";
+			return false;
+		}
+
+		this.tagsInput = parseTags([this.tagsInput, parsedDraft.join(" ")].filter(Boolean).join(" ")).join(", ");
+		this.tagsDraft = "";
+		return true;
+	}
+
+	private removeTag(tagToRemove: string): void {
+		this.tagsInput = this.getTags()
+			.filter((tag) => tag !== tagToRemove)
+			.join(", ");
+	}
+
 	private redraw(): void {
 		this.onOpen();
 	}
+}
+
+function getModalAttachmentCardClass(attachment: PendingQuickAttachment): string {
+	switch (attachment.type) {
+		case "image":
+			return "is-image";
+		case "audio":
+			return "is-audio";
+		case "file":
+			return "is-file";
+		default:
+			return "";
+	}
+}
+
+function formatModalAttachmentSize(bytes: number): string {
+	if (bytes < 1024) {
+		return `${bytes} B`;
+	}
+
+	if (bytes < 1024 * 1024) {
+		return `${(bytes / 1024).toFixed(1)} KB`;
+	}
+
+	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
