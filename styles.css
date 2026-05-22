@@ -923,27 +923,28 @@ input.timeline-composer-tag-input:focus-visible {
 	flex-wrap: wrap;
 }
 
-.pt-tag {
+.pt-entry-tags button.pt-tag {
 	appearance: none;
 	-webkit-appearance: none;
 	font-size: 0.78em;
-	padding: 1px 6px;
-	border: 0;
+	padding: 0 2px;
+	border: 0 !important;
 	border-radius: 999px;
-	background: var(--background-modifier-hover);
+	background: transparent !important;
 	color: var(--text-muted);
-	box-shadow: none;
+	box-shadow: none !important;
 	cursor: pointer;
-	transition: background-color 120ms ease, color 120ms ease;
+	transition:
+		color 120ms ease;
 }
 
-.pt-tag:hover {
-	background: color-mix(in srgb, var(--background-modifier-hover) 65%, var(--interactive-accent) 35%);
+.pt-entry-tags button.pt-tag:hover {
+	background: transparent !important;
 	color: var(--text-normal);
 }
 
-.pt-tag.is-active {
-	background: color-mix(in srgb, var(--interactive-accent) 18%, var(--background-modifier-hover) 82%);
+.pt-entry-tags button.pt-tag.is-active {
+	background: transparent !important;
 	color: var(--interactive-accent);
 }
 
