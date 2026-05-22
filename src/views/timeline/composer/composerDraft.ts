@@ -40,6 +40,17 @@ export function removeComposerTag(
 		.join(", ");
 }
 
+export function addComposerTag(
+	state: ComposerTagDraftState,
+	tagToAdd: string,
+): void {
+	state.tagsValue = parseTags(
+		[state.tagsValue, tagToAdd]
+			.filter(Boolean)
+			.join(" "),
+	).join(", ");
+}
+
 export function hasComposerDraftChanges(state: ComposerDraftState): boolean {
 	return Boolean(
 		state.tagsValue.trim() ||

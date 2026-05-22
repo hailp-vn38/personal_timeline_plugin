@@ -55,6 +55,58 @@ export class TimelineIndexService {
 		);
 	}
 
+	getTagSuggestionsForDate(
+		date: string,
+		excludedTags: string[] = [],
+		limit = 8,
+	): string[] {
+		const excluded = new Set(excludedTags);
+		const tagStats = new Map<string, { count: number; lastUsedAt: string }>();
+
+		for (const item of this.index.getAll()) {
+			if (item.date !== date) {
+				continue;
+			}
+
+			for (const tag of item.tags) {
+				if (excluded.has(tag)) {
+					continue;
+				}
+
+				const current = tagStats.get(tag);
+				if (!current) {
+					tagStats.set(tag, {
+						count: 1,
+						lastUsedAt: item.createdAt,
+					});
+					continue;
+				}
+
+				current.count += 1;
+				if (item.createdAt > current.lastUsedAt) {
+					current.lastUsedAt = item.createdAt;
+				}
+			}
+		}
+
+		return [...tagStats.entries()]
+			.sort((left, right) => {
+				const [, leftStat] = left;
+				const [, rightStat] = right;
+				if (rightStat.count !== leftStat.count) {
+					return rightStat.count - leftStat.count;
+				}
+
+				if (rightStat.lastUsedAt !== leftStat.lastUsedAt) {
+					return rightStat.lastUsedAt.localeCompare(leftStat.lastUsedAt);
+				}
+
+				return left[0].localeCompare(right[0]);
+			})
+			.slice(0, limit)
+			.map(([tag]) => tag);
+	}
+
 	getMalformedEntryCount(): number {
 		return this.malformedEntryCount;
 	}

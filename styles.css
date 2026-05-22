@@ -342,6 +342,7 @@
 	border-bottom: none;
 }
 
+
 .timeline-composer-tag-list {
 	display: flex;
 	flex-wrap: wrap;
@@ -788,7 +789,7 @@ input.timeline-composer-tag-input:focus-visible {
 }
 
 .pt-day-group {
-	margin-top: 8px;
+	margin-top: 6px;
 }
 
 .pt-timeline-list {
@@ -796,7 +797,7 @@ input.timeline-composer-tag-input:focus-visible {
 }
 
 .pt-day-header {
-	margin: 2px 0 8px;
+	margin: 2px 0 6px;
 	padding-left: 4px;
 	color: var(--text-normal);
 	font-size: 1em;
@@ -805,6 +806,9 @@ input.timeline-composer-tag-input:focus-visible {
 
 .pt-timeline {
 	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
 }
 
 .pt-entry {
@@ -867,7 +871,7 @@ input.timeline-composer-tag-input:focus-visible {
 
 .pt-entry-main {
 	min-width: 0;
-	padding: 0 2px 20px 0;
+	padding: 0 2px 1px 0;
 	border-radius: 8px;
 }
 
