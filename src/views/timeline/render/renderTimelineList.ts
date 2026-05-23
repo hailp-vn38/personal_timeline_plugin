@@ -10,10 +10,20 @@ interface RenderTimelineListOptions {
 	selectedTag: string;
 	onTagToggle: (tag: string) => void;
 	onOpenMenu: (event: MouseEvent, item: TimelineIndexItem) => void;
+	onTaskToggle: (
+		item: TimelineIndexItem,
+		taskIndex: number,
+		checked: boolean,
+	) => void;
 	renderAttachments: (
 		container: HTMLElement,
 		attachments: TimelineAttachment[],
 	) => void;
+	renderMarkdown: (
+		container: HTMLElement,
+		markdown: string,
+		item: TimelineIndexItem,
+	) => Promise<void>;
 }
 
 export function renderTimelineList(
@@ -43,7 +53,9 @@ export function renderTimelineList(
 					selectedTag: options.selectedTag,
 					onTagToggle: options.onTagToggle,
 					onOpenMenu: options.onOpenMenu,
+					onTaskToggle: options.onTaskToggle,
 					renderAttachments: options.renderAttachments,
+					renderMarkdown: options.renderMarkdown,
 				},
 			);
 		});

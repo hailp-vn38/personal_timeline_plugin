@@ -3,6 +3,7 @@ import { TFile, type App } from "obsidian";
 import type { TimelineIndexItem } from "../models/TimelineEntry";
 import type { TimelinePluginSettings } from "../models/TimelineSettings";
 import { countMalformedTimelineEntryMetas, parseTimelineEntries } from "../parser/parseTimelineEntries";
+import { extractEditableMarkdownContent } from "../storage/timelineRepository";
 
 import { TimelineIndex } from "./TimelineIndex";
 
@@ -162,6 +163,11 @@ function extractTextPreview(blockMarkdown: string): string {
 }
 
 function createIndexItem(file: TFile, entry: ReturnType<typeof parseTimelineEntries>[number]): TimelineIndexItem {
+	const contentMarkdown = extractEditableMarkdownContent(
+		entry.markdown,
+		entry.meta.attachments,
+	);
+
 	return {
 		id: entry.meta.id,
 		type: entry.meta.type,
@@ -176,5 +182,6 @@ function createIndexItem(file: TFile, entry: ReturnType<typeof parseTimelineEntr
 		sourcePath: file.path,
 		blockId: entry.meta.id,
 		textPreview: extractTextPreview(entry.markdown),
+		contentMarkdown,
 	};
 }

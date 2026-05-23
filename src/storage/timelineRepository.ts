@@ -140,6 +140,57 @@ export class TimelineRepository {
 		await updateTimelineFrontmatter(file, entries.length, updatedAt);
 	}
 
+	async updateEntryContent(
+		sourcePath: string,
+		entryId: string,
+		content: string,
+	): Promise<void> {
+		const file = this.requireTimelineFile(sourcePath);
+		const markdown = await this.app.vault.cachedRead(file);
+		const entries = parseTimelineEntries(markdown);
+		const target = entries.find((entry) => entry.meta.id === entryId);
+		if (!target) {
+			throw new Error(`Timeline entry not found: ${entryId}`);
+		}
+
+		const updatedAt = toIsoString(new Date());
+		const nextMeta: TimelineEntryMeta = {
+			...stripLegacyTitle(target.meta),
+			updatedAt,
+		};
+		const nextBlock = createTimelineEntryBlock(
+			nextMeta,
+			combineContentAndEmbeds(content, target.meta.attachments),
+		);
+		const nextMarkdown = replaceEntryBlock(markdown, entryId, nextBlock);
+		await this.app.vault.modify(file, nextMarkdown);
+		await updateTimelineFrontmatter(file, entries.length, updatedAt);
+	}
+
+	async toggleTaskInEntry(
+		sourcePath: string,
+		entryId: string,
+		taskIndex: number,
+		checked: boolean,
+	): Promise<boolean> {
+		const entry = await this.getEntryById(sourcePath, entryId);
+		if (!entry) {
+			throw new Error(`Timeline entry not found: ${entryId}`);
+		}
+
+		const content = extractEditableMarkdownContent(
+			entry.markdown,
+			entry.meta.attachments,
+		);
+		const nextContent = toggleTaskAtIndex(content, taskIndex, checked);
+		if (nextContent === null) {
+			return false;
+		}
+
+		await this.updateEntryContent(sourcePath, entryId, nextContent);
+		return true;
+	}
+
 	async deleteEntry(sourcePath: string, entryId: string): Promise<void> {
 		const file = this.requireTimelineFile(sourcePath);
 		const markdown = await this.app.vault.cachedRead(file);
@@ -277,4 +328,44 @@ function currentSecondsTime(date: Date): string {
 
 function escapeRegExp(value: string): string {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function toggleTaskAtIndex(
+	content: string,
+	taskIndex: number,
+	checked: boolean,
+): string | null {
+	if (taskIndex < 0) {
+		return null;
+	}
+
+	const taskLinePattern = /^(\s*(?:[-*+]|\d+\.)\s+\[)( |x|X)(\].*)$/gm;
+	let currentIndex = 0;
+	let didToggle = false;
+
+	const nextContent = content.replace(
+		taskLinePattern,
+		(
+			match: string,
+			prefix: string,
+			state: string,
+			suffix: string,
+		): string => {
+			if (currentIndex !== taskIndex) {
+				currentIndex += 1;
+				return match;
+			}
+
+			currentIndex += 1;
+			didToggle = true;
+			const nextState = checked ? "x" : " ";
+			if (state === nextState) {
+				return match;
+			}
+
+			return `${prefix}${nextState}${suffix}`;
+		},
+	);
+
+	return didToggle ? nextContent : null;
 }

@@ -51,6 +51,7 @@ import {
 	resetExpandedFilters,
 	updateDatePreset,
 } from "./timeline/utils/timelineFilterActions";
+import { renderTimelineEntryMarkdown } from "./timeline/render/renderTimelineEntry";
 import { renderTimelineEntryAttachments } from "./timeline/render/renderTimelineEntryAttachments";
 import { renderTimelineList } from "./timeline/render/renderTimelineList";
 import { renderTimelineToolbar } from "./timeline/render/renderTimelineToolbar";
@@ -204,8 +205,14 @@ export class TimelineView extends ItemView {
 			onOpenMenu: (event, item) => {
 				openTimelineEntryMenu(event, item, this.entryActions);
 			},
+			onTaskToggle: (item, taskIndex, checked) => {
+				void this.handleEntryTaskToggle(item, taskIndex, checked);
+			},
 			renderAttachments: (entryContainer, attachments) => {
 				this.renderEntryAttachments(entryContainer, attachments);
+			},
+			renderMarkdown: async (entryContainer, markdown, item) => {
+				await this.renderEntryMarkdown(entryContainer, markdown, item);
 			},
 		});
 	}
@@ -316,6 +323,50 @@ export class TimelineView extends ItemView {
 			},
 			getResourcePath: (file) => this.plugin.app.vault.getResourcePath(file),
 		});
+	}
+
+	private async renderEntryMarkdown(
+		container: HTMLElement,
+		markdown: string,
+		item: TimelineIndexItem,
+	): Promise<void> {
+		await renderTimelineEntryMarkdown(
+			this.app,
+			this,
+			container,
+			markdown,
+			item.sourcePath,
+			(taskIndex, checked) => {
+				void this.handleEntryTaskToggle(item, taskIndex, checked);
+			},
+		);
+	}
+
+	private async handleEntryTaskToggle(
+		item: TimelineIndexItem,
+		taskIndex: number,
+		checked: boolean,
+	): Promise<void> {
+		try {
+			const updated = await this.plugin.timelineRepository.toggleTaskInEntry(
+				item.sourcePath,
+				item.id,
+				taskIndex,
+				checked,
+			);
+			if (!updated) {
+				new Notice("Task not found in this entry.");
+				await this.refresh();
+				return;
+			}
+
+			await this.plugin.timelineIndex.rebuild();
+			await this.plugin.refreshTimelineViews();
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Unknown error";
+			new Notice(`Unable to update task: ${message}`);
+			await this.refresh();
+		}
 	}
 
 	private async addPendingFiles(

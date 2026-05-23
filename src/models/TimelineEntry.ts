@@ -47,4 +47,5 @@ export interface TimelineIndexItem {
 	sourcePath: string;
 	blockId: string;
 	textPreview: string;
+	contentMarkdown: string;
 }
