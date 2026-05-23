@@ -20,7 +20,11 @@ export function renderTimelineList(
 	container: HTMLElement,
 	options: RenderTimelineListOptions,
 ): void {
-	for (const [date, entries] of groupEntriesByDate(options.items)) {
+	const groups = groupEntriesByDate(options.items);
+	let renderedEntryCount = 0;
+	const totalEntries = options.items.length;
+
+	for (const [date, entries] of groups) {
 		const groupEl = container.createDiv({ cls: "pt-day-group" });
 		groupEl.createDiv({
 			cls: "pt-day-header",
@@ -28,11 +32,13 @@ export function renderTimelineList(
 		});
 
 		const timelineEl = groupEl.createDiv({ cls: "pt-timeline" });
-		entries.forEach((entry, index) => {
+		entries.forEach((entry) => {
+			renderedEntryCount += 1;
 			renderTimelineEntry(
 				timelineEl,
 				entry,
-				index === entries.length - 1,
+				renderedEntryCount === 1,
+				renderedEntryCount === totalEntries,
 				{
 					selectedTag: options.selectedTag,
 					onTagToggle: options.onTagToggle,

@@ -1,6 +1,6 @@
 import type { TimelineAttachment } from "../../../models/TimelineAttachment";
 import type { TimelineIndexItem } from "../../../models/TimelineEntry";
-import { getDotClass } from "../utils/timelineGrouping";
+import { getDotClass, getLineClass } from "../utils/timelineGrouping";
 
 interface RenderTimelineEntryOptions {
 	selectedTag: string;
@@ -15,17 +15,20 @@ interface RenderTimelineEntryOptions {
 export function renderTimelineEntry(
 	container: HTMLElement,
 	item: TimelineIndexItem,
-	isLast: boolean,
+	isFirst: boolean,
+	_isLast: boolean,
 	options: RenderTimelineEntryOptions,
 ): void {
 	const entryEl = container.createDiv({ cls: "pt-entry" });
 	const railEl = entryEl.createDiv({ cls: "pt-rail" });
+	const lineClassName = getLineClass(item);
+	if (!isFirst) {
+		railEl.createDiv({ cls: `pt-line pt-line-top ${lineClassName}` });
+	}
 	railEl.createDiv({
 		cls: `pt-dot ${getDotClass(item.type)}`,
 	});
-	if (!isLast) {
-		railEl.createDiv({ cls: "pt-line" });
-	}
+	railEl.createDiv({ cls: `pt-line pt-line-bottom ${lineClassName}` });
 
 	const mainEl = entryEl.createDiv({ cls: "pt-entry-main" });
 	const headerEl = mainEl.createDiv({ cls: "pt-entry-header" });

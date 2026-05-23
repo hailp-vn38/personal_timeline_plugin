@@ -794,6 +794,9 @@ input.timeline-composer-tag-input:focus-visible {
 
 .pt-timeline-list {
 	--pt-entry-header-height: 28px;
+	--pt-timeline-gap: 4px;
+	--pt-dot-size: 15px;
+	--pt-dot-line-padding: 8px;
 }
 
 .pt-day-header {
@@ -808,7 +811,7 @@ input.timeline-composer-tag-input:focus-visible {
 	position: relative;
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--pt-timeline-gap);
 }
 
 .pt-entry {
@@ -819,30 +822,58 @@ input.timeline-composer-tag-input:focus-visible {
 }
 
 .pt-rail {
-	display: grid;
-	grid-template-rows: var(--pt-entry-header-height) 1fr;
-	justify-items: center;
+	position: relative;
+	display: flex;
+	justify-content: center;
 	align-self: stretch;
 }
 
 .pt-dot {
-	width: 15px;
-	height: 15px;
+	width: var(--pt-dot-size);
+	height: var(--pt-dot-size);
+	margin-top: calc((var(--pt-entry-header-height) - var(--pt-dot-size)) / 2);
 	border-radius: 999px;
 	background: var(--interactive-accent);
 	border: 3px solid var(--background-primary);
 	box-shadow: 0 0 0 2px var(--text-normal);
 	z-index: 2;
-	align-self: center;
+	flex-shrink: 0;
 }
 
 .pt-line {
-	position: static;
+	position: absolute;
 	width: 2px;
-	height: 100%;
-	min-height: 12px;
 	background: var(--background-modifier-border);
+	border-radius: 999px;
 	z-index: 1;
+}
+
+.pt-line-default {
+	background: var(--background-modifier-border);
+}
+
+.pt-line-image {
+	background: var(--color-yellow, #f2c94c);
+}
+
+.pt-line-audio {
+	background: var(--color-red, #eb5757);
+}
+
+.pt-line-top {
+	top: 0;
+	height: calc(
+		(var(--pt-entry-header-height) - var(--pt-dot-size)) / 2 -
+			var(--pt-dot-line-padding)
+	);
+}
+
+.pt-line-bottom {
+	top: calc(
+		(var(--pt-entry-header-height) + var(--pt-dot-size)) / 2 +
+			var(--pt-dot-line-padding)
+	);
+	bottom: calc(var(--pt-timeline-gap) * -1);
 }
 
 .pt-dot-checkin {
@@ -900,16 +931,29 @@ input.timeline-composer-tag-input:focus-visible {
 }
 
 .pt-entry-menu {
-	border: none;
-	background: transparent;
-	color: var(--text-muted);
+	appearance: none;
+	-webkit-appearance: none;
+	border: 0 !important;
+	background: transparent !important;
+	color: var(--text-muted) !important;
 	cursor: pointer;
-	padding: 0 2px;
-	opacity: 0.65;
+	padding: 0;
+	opacity: 1;
+	box-shadow: none !important;
+	border-radius: 0;
+	outline: none;
 }
 
+.pt-entry-menu:hover,
+.pt-entry-menu:focus,
+.pt-entry-menu:focus-visible,
+.pt-entry-menu:active,
 .pt-entry-main:hover .pt-entry-menu {
-	opacity: 1;
+	background: transparent !important;
+	color: var(--text-normal) !important;
+	box-shadow: none !important;
+	border: 0 !important;
+	outline: none !important;
 }
 
 .pt-entry-body {

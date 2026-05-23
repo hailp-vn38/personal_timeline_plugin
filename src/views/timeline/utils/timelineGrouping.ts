@@ -39,3 +39,15 @@ export function getDotClass(type?: TimelineIndexItem["type"]): string {
 			return "pt-dot-checkin";
 	}
 }
+
+export function getLineClass(item: TimelineIndexItem): string {
+	if (item.attachmentTypes.includes("audio")) {
+		return "pt-line-audio";
+	}
+
+	if (item.attachmentTypes.includes("image")) {
+		return "pt-line-image";
+	}
+
+	return "pt-line-default";
+}
