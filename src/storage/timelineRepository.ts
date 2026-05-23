@@ -304,11 +304,14 @@ export function extractEditableMarkdownContent(
 		.trim();
 
 	for (const embed of buildAttachmentEmbeds(attachments)) {
-		const pattern = new RegExp(`(?:\\n\\s*)?${escapeRegExp(embed)}\\s*$`);
-		body = body.replace(pattern, "").trimEnd();
+		const pattern = new RegExp(
+			`^\\s*${escapeRegExp(embed)}\\s*$\\n?`,
+			"gm",
+		);
+		body = body.replace(pattern, "");
 	}
 
-	return body.trim();
+	return body.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 function cloneAttachments(attachments: TimelineAttachment[], timestamp: Date): TimelineAttachment[] {
