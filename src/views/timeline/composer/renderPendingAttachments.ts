@@ -52,15 +52,25 @@ export function renderPendingAttachments(
 			const audioSummary = card.createDiv({
 				cls: "timeline-pending-audio-row",
 			});
-			audioSummary.createDiv({ cls: "timeline-pending-audio-dot" });
-			audioSummary.createEl("strong", {
-				cls: "timeline-pending-audio-title",
-				text: "Recording",
+			if (attachment.previewUrl) {
+				audioSummary.createEl("audio", {
+					cls: "timeline-pending-audio-player",
+					attr: {
+						controls: "true",
+						preload: "metadata",
+						src: attachment.previewUrl,
+					},
+				});
+			}
+			const removeButton = audioSummary.createEl("button", {
+				cls: "timeline-pending-remove is-inline",
+				attr: { "aria-label": `Remove ${attachment.name}` },
 			});
-			audioSummary.createEl("span", {
-				cls: "timeline-pending-audio-meta",
-				text: formatPendingAttachmentSize(attachment.data.byteLength),
+			setIcon(removeButton, "x");
+			removeButton.addEventListener("click", () => {
+				options.onRemove(index);
 			});
+			return;
 		} else if (attachment.type === "file") {
 			const fileSummary = card.createDiv({
 				cls: "timeline-pending-file-row",
