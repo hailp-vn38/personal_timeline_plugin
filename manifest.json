@@ -1,7 +1,7 @@
 {
 	"id": "personal-timeline",
 	"name": "Personal Timeline Check-in",
-	"version": "1.1.4",
+	"version": "1.1.5",
 	"minAppVersion": "0.15.0",
 	"description": "Capture daily timeline check-ins in a right sidebar with local-first markdown storage.",
 	"author": "Lam Phuc Hai",
